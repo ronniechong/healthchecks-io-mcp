@@ -17,7 +17,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "tsc -p tsconfig.json --noEmit",
-    "test": "node --test dist/smoke.test.js",
+    "test": "node --test dist/smoke.test.js dist/key-redaction.test.js dist/api-client.test.js dist/tier.test.js dist/tools.test.js",
     "pretest": "npm run build"
   },
   "dependencies": {

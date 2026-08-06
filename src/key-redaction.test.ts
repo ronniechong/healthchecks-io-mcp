@@ -4,12 +4,8 @@ import http from 'node:http';
 import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 
-/**
- * Minimal stand-in for the real Healthchecks.io API, used only so this
- * subprocess test doesn't depend on live network access or real
- * credentials. HEALTHCHECKS_BASE_URL is an internal test-only seam (see
- * index.ts) — not a public config option.
- */
+const FAKE_KEY = 'hcw_test_secret_value_should_never_leak';
+
 async function startMockHcServer(): Promise<{ url: string; close: () => Promise<void> }> {
     const server = http.createServer((req, res) => {
         if (req.url === '/channels/') {
@@ -17,11 +13,7 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
             res.end('[]');
             return;
         }
-        if (req.url === '/checks/') {
-            res.writeHead(200, { 'content-type': 'application/json' });
-            res.end(JSON.stringify({ checks: [] }));
-            return;
-        }
+        // Everything else 404s (HTML body), to induce a real error path.
         res.writeHead(404, { 'content-type': 'text/html' });
         res.end('<html>Not Found</html>');
     });
@@ -35,25 +27,31 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
     };
 }
 
-test('server boots over stdio, detects tier, and registers exactly the 4 v1 tools', async () => {
+test('the API key never appears in stdout or stderr, including on an induced error path', async () => {
     const mock = await startMockHcServer();
-    const client = new Client({ name: 'smoke-test-client', version: '1.0.0' });
+    let stderrOutput = '';
+
+    const client = new Client({ name: 'redaction-test-client', version: '1.0.0' });
     const transport = new StdioClientTransport({
         command: 'node',
         args: ['dist/index.js'],
-        env: { ...process.env, HEALTHCHECKS_API_KEY: 'fake-test-key', HEALTHCHECKS_BASE_URL: mock.url }
+        env: { ...process.env, HEALTHCHECKS_API_KEY: FAKE_KEY, HEALTHCHECKS_BASE_URL: mock.url },
+        stderr: 'pipe'
+    });
+
+    transport.stderr?.on('data', (chunk: Buffer) => {
+        stderrOutput += chunk.toString();
     });
 
     await client.connect(transport);
     try {
-        const { tools } = await client.listTools();
-        assert.deepEqual(
-            tools.map((t) => t.name).sort(),
-            ['get_check', 'list_check_pings', 'list_checks', 'list_integrations']
-        );
+        // Induce a real error path (mock server 404s everything but /channels/).
+        const result = await client.callTool({ name: 'get_check', arguments: { check_id: 'does-not-exist' } });
+        assert.equal(result.isError, true);
 
-        const result = await client.callTool({ name: 'list_checks', arguments: {} });
-        assert.equal(result.isError, undefined);
+        const stdoutFromToolResult = JSON.stringify(result);
+        assert.doesNotMatch(stdoutFromToolResult, new RegExp(FAKE_KEY));
+        assert.doesNotMatch(stderrOutput, new RegExp(FAKE_KEY));
     } finally {
         await client.close();
         await mock.close();
