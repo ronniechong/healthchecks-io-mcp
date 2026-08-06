@@ -26,6 +26,15 @@ npm test           # build, then run tests (node:test)
 npm audit           # dependency vulnerability check
 ```
 
+## Gotchas
+
+`npm test`'s `node --test` target lists each compiled test file
+explicitly (`dist/smoke.test.js`) rather than pointing at the `dist`
+directory or a glob — passing `dist` directly makes Node's test runner
+also try to execute `dist/index.js`, which never exits (it's the stdio
+server), hanging the run forever. Add new test files to the `test` script
+by name as they're created.
+
 ## Feature philosophy
 
 v1 ships read-only tools only. Mutating tools (v2) come later, once v1 is
