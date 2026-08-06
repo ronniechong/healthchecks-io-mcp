@@ -1,0 +1,31 @@
+{
+  "name": "healthchecks-io-mcp",
+  "version": "0.0.1",
+  "description": "Unofficial MCP server for managing Healthchecks.io checks via the Management API",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "healthchecks-io-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "test": "node --test 'dist/**/*.test.js'",
+    "pretest": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/server": "^2.0.0"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/client": "^2.0.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^7.0.0"
+  }
+}
