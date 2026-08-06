@@ -15,15 +15,35 @@ service. Unofficial, unaffiliated with Healthchecks.io.
 - Native `fetch` (Node 18+) for HTTP — no HTTP client library
 - `node:test` for unit/integration tests — no external test framework
 - npm as the package manager
+- Prettier (2-space indent, single quotes, no trailing commas) +
+  EditorConfig for consistent formatting across editors
+
+## Structure
+
+```
+src/
+  index.ts              entrypoint — reads env, wires everything, runs main()
+  smoke.test.ts          subprocess-level test (spawns dist/index.js)
+  key-redaction.test.ts  subprocess-level test (spawns dist/index.js)
+  config/                constants (base URL, timeouts)
+  lib/                   API client, key-tier detection, error translation,
+                          response types — shared, no MCP-specific code
+  server/                McpServer/client construction (server-factory.ts)
+  tools/                 one file per MCP tool, plus shared.ts for helpers
+                          used by more than one tool, index.ts aggregates
+                          registration
+```
 
 ## Commands
 
 ```
-npm install       # install dependencies
-npm run build      # compile TypeScript to dist/
-npm run typecheck  # type-check without emitting
-npm test           # build, then run tests (node:test)
-npm audit           # dependency vulnerability check
+npm install         # install dependencies
+npm run build        # compile TypeScript to dist/
+npm run typecheck    # type-check without emitting
+npm test             # build, then run tests (node:test)
+npm run format        # apply Prettier formatting
+npm run format:check  # check formatting without writing (CI uses this)
+npm audit             # dependency vulnerability check
 ```
 
 ## Gotchas
@@ -37,14 +57,14 @@ npm audit           # dependency vulnerability check
 - `src/index.ts` has a top-level `main()` call as a side effect of import
   — never import from `index.ts` in tests (it will try to read
   `HEALTHCHECKS_API_KEY` and call `process.exit`). Server/client
-  construction lives in `src/server-factory.ts` instead, which is safe to
-  import.
+  construction lives in `src/server/server-factory.ts` instead, which is
+  safe to import.
 - The Healthchecks.io `/checks/{id}/pings/` endpoint only accepts a
   check's `uuid`, not its `unique_key` — confirmed live in M03, and
   different from `/checks/{id}` (`get_check`), which accepts either. The
   `list_check_pings` tool resolves a non-uuid-shaped `check_id` via
-  `get_check` first (see `resolveUuid` in `src/tools.ts`) so callers can
-  pass either identifier consistently across tools.
+  `get_check` first (see `resolveUuid` in `src/tools/shared.ts`) so
+  callers can pass either identifier consistently across tools.
 - `HEALTHCHECKS_BASE_URL` is an internal, undocumented env var used only
   by the subprocess-spawning tests (`smoke.test.ts`, `key-redaction.test.ts`)
   to point the server at a local mock instead of the real API. It is not a

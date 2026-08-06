@@ -37,12 +37,12 @@ Example MCP client config (stdio):
 
 ## Tools
 
-| Tool | Description | Requires read-write key? |
-|---|---|---|
-| `list_checks` | List all checks on the account. | No |
-| `get_check` | Get a single check's details, by UUID or unique key. | No |
-| `list_check_pings` | List recent ping history for a check. | Yes |
-| `list_integrations` | List configured notification integrations. | Yes |
+| Tool                | Description                                          | Requires read-write key? |
+| ------------------- | ---------------------------------------------------- | ------------------------ |
+| `list_checks`       | List all checks on the account.                      | No                       |
+| `get_check`         | Get a single check's details, by UUID or unique key. | No                       |
+| `list_check_pings`  | List recent ping history for a check.                | Yes                      |
+| `list_integrations` | List configured notification integrations.           | Yes                      |
 
 The server detects your API key's tier once when it connects. If it's a
 read-only key, `list_check_pings` and `list_integrations` return a clear
