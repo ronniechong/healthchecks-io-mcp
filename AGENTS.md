@@ -91,13 +91,12 @@ npm audit             # dependency vulnerability check
   endpoint to call.
 - Published to the official MCP Registry as
   `io.github.ronniechong/healthchecks-io-mcp`, via `server.json` at the
-  repo root and the `mcp-publisher` CLI. On every version bump: update
-  both `version` fields in `server.json` (top-level and inside
-  `packages[0]`) to match `package.json`, publish to npm first (the
-  registry only stores metadata, not artifacts, and validates against the
-  already-published npm package's `mcpName` field), then run
-  `mcp-publisher publish`. Forgetting this step doesn't break anything —
-  the registry listing just goes stale, pointing at an older version.
+  repo root. **Automated** as of the `release.yml` update below —
+  `server.json`'s version fields sync from `package.json` and get
+  published to the registry (via `mcp-publisher` + GitHub OIDC auth, no
+  secrets needed) automatically on every GitHub Release, right after the
+  npm publish step. No manual `mcp-publisher` steps needed for routine
+  version bumps anymore.
 
 ## Feature philosophy
 
