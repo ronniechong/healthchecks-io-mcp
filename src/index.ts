@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { StdioServerTransport } from '@modelcontextprotocol/server/stdio';
 import { DEFAULT_BASE_URL } from './config/constants.js';
 import { detectKeyTier, type KeyTier } from './lib/tier.js';
