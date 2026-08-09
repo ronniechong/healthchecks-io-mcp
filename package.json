@@ -1,7 +1,8 @@
 {
   "name": "@digitalronin/healthchecks-io-mcp",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Unofficial MCP server for managing Healthchecks.io checks via the Management API",
+  "mcpName": "io.github.ronniechong/healthchecks-io-mcp",
   "license": "MIT",
   "type": "module",
   "publishConfig": {
