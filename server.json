@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ronniechong/healthchecks-io-mcp",
+  "description": "Unofficial MCP server for managing Healthchecks.io checks via the Management API",
+  "repository": {
+    "url": "https://github.com/ronniechong/healthchecks-io-mcp",
+    "source": "github"
+  },
+  "version": "2.0.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@digitalronin/healthchecks-io-mcp",
+      "version": "2.0.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Healthchecks.io API key (read-only or read-write, from Settings → API Access)",
+          "isRequired": true,
+          "format": "string",
+          "isSecret": true,
+          "name": "HEALTHCHECKS_API_KEY"
+        }
+      ]
+    }
+  ]
+}
