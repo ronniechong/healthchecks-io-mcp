@@ -10,6 +10,8 @@ import { registerUpdateCheck } from './update-check.js';
 import { registerPauseCheck } from './pause-check.js';
 import { registerResumeCheck } from './resume-check.js';
 import { registerDeleteCheck } from './delete-check.js';
+import { registerListCheckFlips } from './list-check-flips.js';
+import { registerListBadges } from './list-badges.js';
 
 export function registerTools(server: McpServer, client: HealthchecksClient, tier: KeyTier): void {
   registerListChecks(server, client);
@@ -21,4 +23,6 @@ export function registerTools(server: McpServer, client: HealthchecksClient, tie
   registerPauseCheck(server, client, tier);
   registerResumeCheck(server, client, tier);
   registerDeleteCheck(server, client, tier);
+  registerListCheckFlips(server, client);
+  registerListBadges(server, client);
 }

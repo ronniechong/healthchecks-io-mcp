@@ -12,11 +12,16 @@ async function main() {
     process.exit(1);
   }
 
-  // HEALTHCHECKS_BASE_URL is an internal test-only override (the client
-  // already takes base URL as a parameter per decision #19) — not a
-  // documented/public config option; real self-hosted support lands in
-  // v1.1 as its own decision.
-  const client = createClient(apiKey, process.env.HEALTHCHECKS_BASE_URL || DEFAULT_BASE_URL);
+  // HEALTHCHECKS_BASE_URL is a documented, supported option (v1.1/M06)
+  // for pointing this server at a self-hosted Healthchecks.io instance
+  // instead of the SaaS service.
+  const baseUrl = process.env.HEALTHCHECKS_BASE_URL || DEFAULT_BASE_URL;
+  if (process.env.HEALTHCHECKS_BASE_URL && !baseUrl.startsWith('https://')) {
+    console.error(
+      'Warning: HEALTHCHECKS_BASE_URL is not https:// — your API key will be sent in plaintext to this URL.'
+    );
+  }
+  const client = createClient(apiKey, baseUrl);
   let tier: KeyTier;
   try {
     tier = await detectKeyTier(client);

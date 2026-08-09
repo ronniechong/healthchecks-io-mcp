@@ -4,7 +4,7 @@ import { DEFAULT_BASE_URL } from '../config/constants.js';
 
 export function createServer(): McpServer {
   return new McpServer(
-    { name: 'healthchecks-io-mcp', version: '2.0.1' },
+    { name: 'healthchecks-io-mcp', version: '2.1.0' },
     { capabilities: { tools: {} } }
   );
 }

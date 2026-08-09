@@ -4,6 +4,18 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.0] - 2026-08-09
+
+### Added
+
+- v3 read-only tools: `list_check_flips` (status-change history) and
+  `list_badges` (badge URLs per tag). Both work with either key tier —
+  confirmed live, unlike `list_check_pings`/`list_integrations`.
+- `HEALTHCHECKS_BASE_URL` promoted from an internal test-only seam to a
+  documented, supported option for pointing this server at a self-hosted
+  Healthchecks.io instance. Logs a warning (doesn't block) if set to a
+  non-`https://` URL.
+
 ## [2.0.1] - 2026-08-09
 
 ### Added

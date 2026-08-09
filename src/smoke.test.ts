@@ -7,8 +7,8 @@ import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 /**
  * Minimal stand-in for the real Healthchecks.io API, used only so this
  * subprocess test doesn't depend on live network access or real
- * credentials. HEALTHCHECKS_BASE_URL is an internal test-only seam (see
- * index.ts) — not a public config option.
+ * credentials, via the same HEALTHCHECKS_BASE_URL a self-hosted user
+ * would set (see index.ts).
  */
 async function startMockHcServer(): Promise<{ url: string; close: () => Promise<void> }> {
   const server = http.createServer((req, res) => {
@@ -29,6 +29,11 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
       );
       return;
     }
+    if (req.url === '/badges/') {
+      res.writeHead(200, { 'content-type': 'application/json' });
+      res.end(JSON.stringify({ badges: { '*': { svg: 'https://example.com/badge.svg' } } }));
+      return;
+    }
     res.writeHead(404, { 'content-type': 'text/html' });
     res.end('<html>Not Found</html>');
   });
@@ -43,7 +48,7 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
   };
 }
 
-test('server boots over stdio, detects tier, registers all 9 tools, and can call a v2 tool', async () => {
+test('server boots over stdio, detects tier, registers all 11 tools, and can call v2/v3 tools', async () => {
   const mock = await startMockHcServer();
   const client = new Client({ name: 'smoke-test-client', version: '1.0.0' });
   const transport = new StdioClientTransport({
@@ -59,6 +64,8 @@ test('server boots over stdio, detects tier, registers all 9 tools, and can call
       'create_check',
       'delete_check',
       'get_check',
+      'list_badges',
+      'list_check_flips',
       'list_check_pings',
       'list_checks',
       'list_integrations',
@@ -75,6 +82,9 @@ test('server boots over stdio, detects tier, registers all 9 tools, and can call
       arguments: { name: 'smoke-test-check' }
     });
     assert.equal(created.isError, undefined);
+
+    const badges = await client.callTool({ name: 'list_badges', arguments: {} });
+    assert.equal(badges.isError, undefined);
   } finally {
     await client.close();
     await mock.close();

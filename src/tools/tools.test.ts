@@ -439,3 +439,97 @@ test('cross-tool sequencing: create -> pause -> resume -> delete against the sam
     await client.close();
   }
 });
+
+// --- v3 tools: flips, badges ---
+
+test('list_check_flips returns the flips array', async () => {
+  const client = await connectedClient('read-only', (async () =>
+    jsonResponse({ flips: [{ timestamp: '2026-08-06T00:00:00Z', up: 1 }] })) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'list_check_flips',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7' }
+    });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(JSON.parse((result.content as Array<{ text: string }>)[0].text), [
+      { timestamp: '2026-08-06T00:00:00Z', up: 1 }
+    ]);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('list_check_flips passes check_id through directly (no resolveUuid), works on read-only key', async () => {
+  const calledUrls: string[] = [];
+  const client = await connectedClient('read-only', (async (url: string) => {
+    calledUrls.push(String(url));
+    return jsonResponse({ flips: [] });
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'list_check_flips',
+      arguments: { check_id: 'some-unique-key-value' }
+    });
+    assert.equal(result.isError, undefined);
+    assert.equal(calledUrls.length, 1);
+    assert.match(calledUrls[0], /\/checks\/some-unique-key-value\/flips\/$/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('list_check_flips passes seconds/start/end filters as query params', async () => {
+  const calledUrls: string[] = [];
+  const client = await connectedClient('read-only', (async (url: string) => {
+    calledUrls.push(String(url));
+    return jsonResponse({ flips: [] });
+  }) as typeof fetch);
+  try {
+    await client.callTool({
+      name: 'list_check_flips',
+      arguments: { check_id: 'abc', seconds: 3600 }
+    });
+    assert.match(calledUrls[0], /\?seconds=3600$/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('list_check_flips on an invalid id returns a clean tool error, not a crash', async () => {
+  const client = await connectedClient(
+    'read-only',
+    (async () =>
+      new Response('<html>Not Found</html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html' }
+      })) as typeof fetch
+  );
+  try {
+    const result = await client.callTool({
+      name: 'list_check_flips',
+      arguments: { check_id: 'nope' }
+    });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /not found/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('list_badges returns the badges map', async () => {
+  const badges = { 'my-tag': { svg: 'https://healthchecks.io/badge/x/y/my-tag.svg' } };
+  const client = await connectedClient('read-only', (async () =>
+    jsonResponse({ badges })) as typeof fetch);
+  try {
+    const result = await client.callTool({ name: 'list_badges', arguments: {} });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(JSON.parse((result.content as Array<{ text: string }>)[0].text), badges);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});

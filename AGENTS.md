@@ -68,11 +68,14 @@ npm audit             # dependency vulnerability check
   `list_check_pings` tool resolves a non-uuid-shaped `check_id` via
   `get_check` first (see `resolveUuid` in `src/tools/shared.ts`) so
   callers can pass either identifier consistently across tools.
-- `HEALTHCHECKS_BASE_URL` is an internal, undocumented env var used only
-  by the subprocess-spawning tests (`smoke.test.ts`, `key-redaction.test.ts`)
-  to point the server at a local mock instead of the real API. It is not a
-  supported user-facing config option — self-hosted base-URL support is
-  deferred to v1.1 (decision #3 in the private working docs).
+- `HEALTHCHECKS_BASE_URL` is a **documented, user-facing option** (as of
+  v3/M06) for pointing this server at a self-hosted Healthchecks.io
+  instance instead of the SaaS service. The subprocess-spawning tests
+  (`smoke.test.ts`, `key-redaction.test.ts`) reuse the same var to point
+  at a local mock server — same mechanism a real self-hosted user relies
+  on. If set to a non-`https://` URL, the server logs a warning to
+  stderr (doesn't block startup) since the API key would otherwise
+  transit in plaintext.
 - The entire test suite runs against mocked `fetch` or a local mock HTTP
   server — no test calls the real Healthchecks.io API. This keeps CI fast
   and credential-free, but means a real API change (renamed field,
@@ -89,6 +92,12 @@ npm audit             # dependency vulnerability check
   Healthchecks.io's side — not a scope choice this project made, a hard
   API limit. Don't add `create_integration`-style tools; there's no
   endpoint to call.
+- `list_check_flips` and `list_badges` (v3/M06) work with a read-only key
+  and don't gate on tier — confirmed live, unlike `list_check_pings`/
+  `list_integrations` (which needed the read-only-degrade pattern).
+  `/checks/{id}/flips/` also accepts a check's `unique_key` directly
+  (confirmed live), unlike `/pings/`, so `list_check_flips` does **not**
+  use `resolveUuid` — don't add it without re-verifying live first.
 - Published to the official MCP Registry as
   `io.github.ronniechong/healthchecks-io-mcp`, via `server.json` at the
   repo root. **Automated** as of the `release.yml` update below —

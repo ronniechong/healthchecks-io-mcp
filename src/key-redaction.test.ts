@@ -62,6 +62,39 @@ test('the API key never appears in stdout or stderr, including on an induced err
   }
 });
 
+test('the API key never appears in output from a v3 read tool error path either', async () => {
+  const mock = await startMockHcServer();
+  let stderrOutput = '';
+
+  const client = new Client({ name: 'redaction-test-client-v3', version: '1.0.0' });
+  const transport = new StdioClientTransport({
+    command: 'node',
+    args: ['dist/index.js'],
+    env: { ...process.env, HEALTHCHECKS_API_KEY: FAKE_KEY, HEALTHCHECKS_BASE_URL: mock.url },
+    stderr: 'pipe'
+  });
+
+  transport.stderr?.on('data', (chunk: Buffer) => {
+    stderrOutput += chunk.toString();
+  });
+
+  await client.connect(transport);
+  try {
+    const result = await client.callTool({
+      name: 'list_check_flips',
+      arguments: { check_id: 'does-not-exist' }
+    });
+    assert.equal(result.isError, true);
+
+    const stdoutFromToolResult = JSON.stringify(result);
+    assert.doesNotMatch(stdoutFromToolResult, new RegExp(FAKE_KEY));
+    assert.doesNotMatch(stderrOutput, new RegExp(FAKE_KEY));
+  } finally {
+    await client.close();
+    await mock.close();
+  }
+});
+
 test('the API key never appears in output from a v2 mutating tool error path either', async () => {
   const mock = await startMockHcServer();
   let stderrOutput = '';
