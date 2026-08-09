@@ -41,12 +41,12 @@ v1 is **read-only**: it can only look up information about your account's
 checks, ping history, and integrations. It cannot create, update, pause, or
 delete anything — those are v2, not yet built.
 
-| Tool                 | Description                                          | Requires read-write key? | Healthchecks.io API endpoint                                                                            |
-| -------------------- | ----------------------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `list_checks`        | List all checks on the account.                       | No                         | [`GET /api/v3/checks/`](https://healthchecks.io/docs/api/#list-checks)                                     |
-| `get_check`          | Get a single check's details, by UUID or unique key.  | No                         | [`GET /api/v3/checks/{uuid}`](https://healthchecks.io/docs/api/#get-check)                                 |
-| `list_check_pings`   | List recent ping history for a check.                 | Yes                        | [`GET /api/v3/checks/{uuid}/pings/`](https://healthchecks.io/docs/api/#list-pings)                         |
-| `list_integrations`  | List configured notification integrations.            | Yes                        | [`GET /api/v3/channels/`](https://healthchecks.io/docs/api/#list-channels)                                 |
+| Tool                | Description                                          | Requires read-write key? | Healthchecks.io API endpoint                                                       |
+| ------------------- | ---------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `list_checks`       | List all checks on the account.                      | No                       | [`GET /api/v3/checks/`](https://healthchecks.io/docs/api/#list-checks)             |
+| `get_check`         | Get a single check's details, by UUID or unique key. | No                       | [`GET /api/v3/checks/{uuid}`](https://healthchecks.io/docs/api/#get-check)         |
+| `list_check_pings`  | List recent ping history for a check.                | Yes                      | [`GET /api/v3/checks/{uuid}/pings/`](https://healthchecks.io/docs/api/#list-pings) |
+| `list_integrations` | List configured notification integrations.           | Yes                      | [`GET /api/v3/channels/`](https://healthchecks.io/docs/api/#list-channels)         |
 
 The server detects your API key's tier once when it connects. If it's a
 read-only key, `list_check_pings` and `list_integrations` return a clear
