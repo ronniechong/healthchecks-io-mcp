@@ -4,6 +4,18 @@
   "description": "Unofficial MCP server for managing Healthchecks.io checks via the Management API",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ronniechong/healthchecks-io-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "healthchecks",
+    "healthchecks.io",
+    "monitoring",
+    "cron-monitoring"
+  ],
   "bin": {
     "healthchecks-io-mcp": "dist/index.js"
   },
