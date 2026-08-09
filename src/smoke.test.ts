@@ -17,9 +17,16 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
       res.end('[]');
       return;
     }
-    if (req.url === '/checks/') {
+    if (req.url === '/checks/' && req.method === 'GET') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ checks: [] }));
+      return;
+    }
+    if (req.url === '/checks/' && req.method === 'POST') {
+      res.writeHead(201, { 'content-type': 'application/json' });
+      res.end(
+        JSON.stringify({ name: 'smoke-test-check', uuid: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7' })
+      );
       return;
     }
     res.writeHead(404, { 'content-type': 'text/html' });
@@ -36,7 +43,7 @@ async function startMockHcServer(): Promise<{ url: string; close: () => Promise<
   };
 }
 
-test('server boots over stdio, detects tier, and registers exactly the 4 v1 tools', async () => {
+test('server boots over stdio, detects tier, registers all 9 tools, and can call a v2 tool', async () => {
   const mock = await startMockHcServer();
   const client = new Client({ name: 'smoke-test-client', version: '1.0.0' });
   const transport = new StdioClientTransport({
@@ -49,14 +56,25 @@ test('server boots over stdio, detects tier, and registers exactly the 4 v1 tool
   try {
     const { tools } = await client.listTools();
     assert.deepEqual(tools.map((t) => t.name).sort(), [
+      'create_check',
+      'delete_check',
       'get_check',
       'list_check_pings',
       'list_checks',
-      'list_integrations'
+      'list_integrations',
+      'pause_check',
+      'resume_check',
+      'update_check'
     ]);
 
     const result = await client.callTool({ name: 'list_checks', arguments: {} });
     assert.equal(result.isError, undefined);
+
+    const created = await client.callTool({
+      name: 'create_check',
+      arguments: { name: 'smoke-test-check' }
+    });
+    assert.equal(created.isError, undefined);
   } finally {
     await client.close();
     await mock.close();

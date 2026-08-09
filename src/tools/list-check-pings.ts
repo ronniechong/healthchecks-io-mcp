@@ -22,7 +22,7 @@ export function registerListCheckPings(
     async ({ check_id }) => {
       if (tier === 'read-only') return readOnlyBlockedResult('list_check_pings');
 
-      const resolved = await resolveUuid(client, check_id);
+      const resolved = await resolveUuid(client, check_id, 'list_check_pings');
       if (!resolved.ok) return resolved.result;
 
       const result = await client.getAllPages<ListPingsResponse, Ping>(

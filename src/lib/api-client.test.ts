@@ -167,6 +167,90 @@ test('getAllPages() treats a response with no next field as a flat single-page l
   }
 });
 
+test('post() sends the body as JSON and returns ok:true on success', async () => {
+  let seenBody: string | undefined;
+  let seenMethod: string | undefined;
+  mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+    seenBody = init?.body as string | undefined;
+    seenMethod = init?.method;
+    return jsonResponse({ name: 'created' }, 201);
+  });
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k' });
+    const result = await client.post('/checks/', { name: 'my check' });
+    assert.equal(result.ok, true);
+    if (result.ok) assert.deepEqual(result.data, { name: 'created' });
+    assert.equal(seenMethod, 'POST');
+    assert.deepEqual(JSON.parse(seenBody ?? '{}'), { name: 'my check' });
+  } finally {
+    mock.reset();
+  }
+});
+
+test('del() issues a DELETE request', async () => {
+  let seenMethod: string | undefined;
+  mock.method(globalThis, 'fetch', async (_url: string, init?: RequestInit) => {
+    seenMethod = init?.method;
+    return jsonResponse({ name: 'deleted' });
+  });
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k' });
+    const result = await client.del('/checks/some-uuid');
+    assert.equal(result.ok, true);
+    assert.equal(seenMethod, 'DELETE');
+  } finally {
+    mock.reset();
+  }
+});
+
+test('post() returns kind:forbidden on a 403', async () => {
+  mock.method(globalThis, 'fetch', async () => jsonResponse({ error: 'account limit' }, 403));
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k' });
+    const result = await client.post('/checks/', { name: 'x' });
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.kind, 'forbidden');
+  } finally {
+    mock.reset();
+  }
+});
+
+test('post() returns kind:conflict on a 409', async () => {
+  mock.method(globalThis, 'fetch', async () => jsonResponse({ error: 'not paused' }, 409));
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k' });
+    const result = await client.post('/checks/some-uuid/resume');
+    assert.equal(result.ok, false);
+    if (!result.ok) assert.equal(result.kind, 'conflict');
+  } finally {
+    mock.reset();
+  }
+});
+
+test('post() times out cleanly rather than hanging, same as get()', async () => {
+  mock.method(
+    globalThis,
+    'fetch',
+    (_url: string, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError'))
+        );
+      })
+  );
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k', timeoutMs: 50 });
+    const result = await client.post('/checks/', { name: 'x' });
+    assert.equal(result.ok, false);
+    if (!result.ok) {
+      assert.equal(result.kind, 'network');
+      assert.match(result.message, /timed out/);
+    }
+  } finally {
+    mock.reset();
+  }
+});
+
 test('get() never includes the API key in any returned error message', async () => {
   mock.method(globalThis, 'fetch', async () => jsonResponse({ error: 'wrong api key' }, 401));
   try {

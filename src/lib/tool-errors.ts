@@ -12,6 +12,12 @@ export function toToolError(result: ApiFailure, context: string): CallToolResult
     case 'not_found':
       text = `${context}: not found. Check the check ID and try again.`;
       break;
+    case 'forbidden':
+      text = `${context}: ${result.message}`;
+      break;
+    case 'conflict':
+      text = `${context}: ${result.message}`;
+      break;
     case 'network':
       text = `${context}: network error — ${result.message}`;
       break;

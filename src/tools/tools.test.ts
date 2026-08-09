@@ -138,3 +138,304 @@ test('list_check_pings calls /pings/ directly when check_id already looks like a
     await client.close();
   }
 });
+
+// --- v2 mutating tools ---
+
+test('create_check is blocked on a read-only key', async () => {
+  const client = await connectedClient('read-only', (async () => jsonResponse({})) as typeof fetch);
+  try {
+    const result = await client.callTool({ name: 'create_check', arguments: { name: 'x' } });
+    assert.equal(result.isError, true);
+    assert.match(
+      (result.content as Array<{ text: string }>)[0].text,
+      /read-write Healthchecks\.io API key/
+    );
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('create_check posts a Simple (timeout) check', async () => {
+  const bodies: unknown[] = [];
+  const client = await connectedClient('read-write', (async (_url: string, init?: RequestInit) => {
+    bodies.push(JSON.parse((init?.body as string) ?? '{}'));
+    return jsonResponse({ name: 'simple', uuid: 'x' }, 201);
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'create_check',
+      arguments: { name: 'simple', timeout: 3600 }
+    });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(bodies[0], { name: 'simple', timeout: 3600 });
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('create_check posts a Cron (schedule+tz) check', async () => {
+  const bodies: unknown[] = [];
+  const client = await connectedClient('read-write', (async (_url: string, init?: RequestInit) => {
+    bodies.push(JSON.parse((init?.body as string) ?? '{}'));
+    return jsonResponse({ name: 'cron', uuid: 'x' }, 201);
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'create_check',
+      arguments: { name: 'cron', schedule: '0 9 * * *', tz: 'Europe/Riga' }
+    });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(bodies[0], { name: 'cron', schedule: '0 9 * * *', tz: 'Europe/Riga' });
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('create_check with unique upserts instead of duplicating', async () => {
+  const bodies: unknown[] = [];
+  const client = await connectedClient('read-write', (async (_url: string, init?: RequestInit) => {
+    bodies.push(JSON.parse((init?.body as string) ?? '{}'));
+    return jsonResponse({ name: 'x', uuid: 'existing' }, 200);
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'create_check',
+      arguments: { name: 'x', unique: ['name'] }
+    });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(bodies[0], { name: 'x', unique: ['name'] });
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('create_check surfaces a 403 (account limit) as a clean, distinct error', async () => {
+  const client = await connectedClient('read-write', (async () =>
+    jsonResponse({ error: 'limit reached' }, 403)) as typeof fetch);
+  try {
+    const result = await client.callTool({ name: 'create_check', arguments: { name: 'x' } });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /account limit/i);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('update_check only sends the fields given, omitted fields are not in the request body', async () => {
+  const bodies: unknown[] = [];
+  const client = await connectedClient('read-write', (async (url: string, init?: RequestInit) => {
+    if (init?.body) bodies.push(JSON.parse(init.body as string));
+    return jsonResponse({ name: 'x', uuid: 'real-uuid-1234' });
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'update_check',
+      arguments: { check_id: 'real-uuid-1234', desc: 'new description' }
+    });
+    assert.equal(result.isError, undefined);
+    assert.deepEqual(bodies[0], { desc: 'new description' });
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('update_check on an invalid id returns a clean tool error, not a crash', async () => {
+  const client = await connectedClient(
+    'read-write',
+    (async () =>
+      new Response('<html>Not Found</html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html' }
+      })) as typeof fetch
+  );
+  try {
+    const result = await client.callTool({
+      name: 'update_check',
+      arguments: { check_id: 'nope', desc: 'x' }
+    });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /not found/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('pause_check without confirm:true returns an error and never calls the API', async () => {
+  let called = false;
+  const client = await connectedClient('read-write', (async () => {
+    called = true;
+    return jsonResponse({});
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'pause_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7' }
+    });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /confirm: true/);
+    assert.equal(called, false);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('pause_check with confirm:true calls the pause endpoint', async () => {
+  const calledUrls: string[] = [];
+  const client = await connectedClient('read-write', (async (url: string) => {
+    calledUrls.push(String(url));
+    return jsonResponse({ status: 'paused' });
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'pause_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7', confirm: true }
+    });
+    assert.equal(result.isError, undefined);
+    assert.match(calledUrls[0], /\/pause$/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('resume_check on an already-active check surfaces the 409 cleanly', async () => {
+  const client = await connectedClient('read-write', (async () =>
+    jsonResponse({ error: 'not paused' }, 409)) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'resume_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7' }
+    });
+    assert.equal(result.isError, true);
+    assert.match(
+      (result.content as Array<{ text: string }>)[0].text,
+      /conflict|not currently be paused/i
+    );
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('resume_check on an invalid id returns a clean tool error, not a crash', async () => {
+  const client = await connectedClient(
+    'read-write',
+    (async () =>
+      new Response('<html>Not Found</html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html' }
+      })) as typeof fetch
+  );
+  try {
+    const result = await client.callTool({
+      name: 'resume_check',
+      arguments: { check_id: 'nope' }
+    });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /not found/);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('delete_check without confirm:true returns an error and never calls the API', async () => {
+  let called = false;
+  const client = await connectedClient('read-write', (async () => {
+    called = true;
+    return jsonResponse({});
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'delete_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7' }
+    });
+    assert.equal(result.isError, true);
+    assert.match((result.content as Array<{ text: string }>)[0].text, /confirm: true/);
+    assert.equal(called, false);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('delete_check with confirm:true issues a DELETE call', async () => {
+  const seenMethods: Array<string | undefined> = [];
+  const client = await connectedClient('read-write', (async (_url: string, init?: RequestInit) => {
+    seenMethods.push(init?.method);
+    return jsonResponse({ name: 'deleted' });
+  }) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'delete_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7', confirm: true }
+    });
+    assert.equal(result.isError, undefined);
+    assert.equal(seenMethods[0], 'DELETE');
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('delete_check is blocked on a read-only key, before the confirm check', async () => {
+  const client = await connectedClient('read-only', (async () => jsonResponse({})) as typeof fetch);
+  try {
+    const result = await client.callTool({
+      name: 'delete_check',
+      arguments: { check_id: 'ca3143a2-e1d4-4be1-a170-5a172aa04df7', confirm: true }
+    });
+    assert.equal(result.isError, true);
+    assert.match(
+      (result.content as Array<{ text: string }>)[0].text,
+      /read-write Healthchecks\.io API key/
+    );
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});
+
+test('cross-tool sequencing: create -> pause -> resume -> delete against the same check', async () => {
+  const uuid = 'ca3143a2-e1d4-4be1-a170-5a172aa04df7';
+  const calledUrls: string[] = [];
+  const client = await connectedClient('read-write', (async (url: string, init?: RequestInit) => {
+    calledUrls.push(`${init?.method ?? 'GET'} ${url}`);
+    return jsonResponse({ name: 'x', uuid });
+  }) as typeof fetch);
+  try {
+    const create = await client.callTool({ name: 'create_check', arguments: { name: 'x' } });
+    assert.equal(create.isError, undefined);
+
+    const pause = await client.callTool({
+      name: 'pause_check',
+      arguments: { check_id: uuid, confirm: true }
+    });
+    assert.equal(pause.isError, undefined);
+
+    const resume = await client.callTool({ name: 'resume_check', arguments: { check_id: uuid } });
+    assert.equal(resume.isError, undefined);
+
+    const del = await client.callTool({
+      name: 'delete_check',
+      arguments: { check_id: uuid, confirm: true }
+    });
+    assert.equal(del.isError, undefined);
+
+    assert.match(calledUrls[0], /^POST .*\/checks\/$/);
+    assert.match(calledUrls[1], /^POST .*\/pause$/);
+    assert.match(calledUrls[2], /^POST .*\/resume$/);
+    assert.match(calledUrls[3], /^DELETE /);
+  } finally {
+    mock.reset();
+    await client.close();
+  }
+});

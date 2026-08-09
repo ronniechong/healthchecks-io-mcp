@@ -29,8 +29,11 @@ src/
   lib/                   API client, key-tier detection, error translation,
                           response types — shared, no MCP-specific code
   server/                McpServer/client construction (server-factory.ts)
-  tools/                 one file per MCP tool, plus shared.ts for helpers
-                          used by more than one tool, index.ts aggregates
+  tools/                 one file per MCP tool (5 v1 read tools, 5 v2
+                          mutating tools), plus shared.ts for helpers used
+                          by more than one tool (resolveUuid,
+                          readOnlyBlockedResult, confirmRequiredResult,
+                          checkInputFields), index.ts aggregates
                           registration
 ```
 
@@ -75,18 +78,31 @@ npm audit             # dependency vulnerability check
   and credential-free, but means a real API change (renamed field,
   different error shape) would only be caught by manual testing, not by
   `npm test`.
+- `pause_check` and `delete_check` require an explicit `confirm: true`
+  argument (`confirmRequiredResult` in `shared.ts`) — this is a
+  server-enforced safeguard against accidental single-call misuse, not a
+  human-approval guarantee. MCP has no protocol-level way to distinguish a
+  genuinely human-directed `confirm: true` from a calling LLM setting it
+  on its own (e.g. under prompt injection). Documented as an accepted
+  residual risk, not solved.
+- Integrations (notification channels) have no write API at all on
+  Healthchecks.io's side — not a scope choice this project made, a hard
+  API limit. Don't add `create_integration`-style tools; there's no
+  endpoint to call.
 
 ## Feature philosophy
 
-v1 ships read-only tools only. Mutating tools (v2) come later, once v1 is
-proven. Keep the dependency tree minimal — every dependency sits in the
-attack surface for a user's Healthchecks.io API key.
+v1 (read-only tools) and v2 (mutating tools, gated to a read-write key)
+have both shipped. Keep the dependency tree minimal — every dependency
+sits in the attack surface for a user's Healthchecks.io API key.
 
 ## Security
 
 This server handles a live third-party API key. Never log the key or let
 it appear in error messages, stack traces, or crash output. Redact it in
-any diagnostic output.
+any diagnostic output. As of v2, a leaked read-write key can silently
+delete a user's monitoring, not just expose data — treat any new
+write-path code with that in mind.
 
 ## Contributing
 

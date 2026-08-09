@@ -10,6 +10,8 @@ export type ApiResult<T> =
   | { ok: true; data: T }
   | { ok: false; kind: 'unauthorized'; message: string }
   | { ok: false; kind: 'not_found'; message: string }
+  | { ok: false; kind: 'forbidden'; message: string }
+  | { ok: false; kind: 'conflict'; message: string }
   | { ok: false; kind: 'network'; message: string }
   | { ok: false; kind: 'unexpected'; status: number; message: string };
 
@@ -29,6 +31,29 @@ export class HealthchecksClient {
    * `next` pagination link returned by a previous response).
    */
   async get<T>(path: string): Promise<ApiResult<T>> {
+    return this.send<T>('GET', path);
+  }
+
+  /** POST with an optional JSON body (create/update/pause/resume). */
+  async post<T>(path: string, body?: unknown): Promise<ApiResult<T>> {
+    return this.send<T>('POST', path, body);
+  }
+
+  /** DELETE — no body. */
+  async del<T>(path: string): Promise<ApiResult<T>> {
+    return this.send<T>('DELETE', path);
+  }
+
+  /**
+   * Shared request path for all HTTP methods (decision #20's invariant:
+   * every outbound call gets the same explicit timeout, regardless of
+   * method — a new POST/DELETE code path must not silently drop this).
+   */
+  private async send<T>(
+    method: 'GET' | 'POST' | 'DELETE',
+    path: string,
+    body?: unknown
+  ): Promise<ApiResult<T>> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     const url =
@@ -37,7 +62,12 @@ export class HealthchecksClient {
     let response: Response;
     try {
       response = await fetch(url, {
-        headers: { 'X-Api-Key': this.apiKey },
+        method,
+        headers: {
+          'X-Api-Key': this.apiKey,
+          ...(body !== undefined ? { 'content-type': 'application/json' } : {})
+        },
+        body: body !== undefined ? JSON.stringify(body) : undefined,
         signal: controller.signal
       });
     } catch (error) {
@@ -59,6 +89,21 @@ export class HealthchecksClient {
     }
     if (response.status === 404) {
       return { ok: false, kind: 'not_found', message: 'Not found.' };
+    }
+    if (response.status === 403) {
+      return {
+        ok: false,
+        kind: 'forbidden',
+        message:
+          'Access denied. This may be an account limit (e.g. free-tier check cap) or a permissions issue.'
+      };
+    }
+    if (response.status === 409) {
+      return {
+        ok: false,
+        kind: 'conflict',
+        message: 'Conflict — the resource is not in the expected state.'
+      };
     }
     if (!response.ok) {
       return {
