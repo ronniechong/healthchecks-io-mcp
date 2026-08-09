@@ -52,6 +52,22 @@ test('get() returns kind:not_found on a 404 with an HTML body (Django default pa
   }
 });
 
+test('get() returns kind:unexpected with the real status on a non-401/404 error (e.g. 429/500)', async () => {
+  mock.method(globalThis, 'fetch', async () => jsonResponse({ error: 'rate limited' }, 429));
+  try {
+    const client = new HealthchecksClient({ apiKey: 'k' });
+    const result = await client.get('/checks/');
+    assert.equal(result.ok, false);
+    if (!result.ok && result.kind === 'unexpected') {
+      assert.equal(result.status, 429);
+    } else {
+      assert.fail('expected kind:unexpected with status 429');
+    }
+  } finally {
+    mock.reset();
+  }
+});
+
 test('get() returns kind:unexpected on a 200 with a non-JSON body', async () => {
   mock.method(
     globalThis,

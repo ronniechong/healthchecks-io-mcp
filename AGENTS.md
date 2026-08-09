@@ -70,6 +70,11 @@ npm audit             # dependency vulnerability check
   to point the server at a local mock instead of the real API. It is not a
   supported user-facing config option — self-hosted base-URL support is
   deferred to v1.1 (decision #3 in the private working docs).
+- The entire test suite runs against mocked `fetch` or a local mock HTTP
+  server — no test calls the real Healthchecks.io API. This keeps CI fast
+  and credential-free, but means a real API change (renamed field,
+  different error shape) would only be caught by manual testing, not by
+  `npm test`.
 
 ## Feature philosophy
 
