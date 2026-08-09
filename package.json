@@ -1,9 +1,12 @@
 {
-  "name": "healthchecks-io-mcp",
+  "name": "@digitalronin/healthchecks-io-mcp",
   "version": "1.0.0",
   "description": "Unofficial MCP server for managing Healthchecks.io checks via the Management API",
   "license": "MIT",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ronniechong/healthchecks-io-mcp.git"

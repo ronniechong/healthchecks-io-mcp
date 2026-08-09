@@ -1,4 +1,4 @@
-# healthchecks-io-mcp
+# @digitalronin/healthchecks-io-mcp
 
 > **Unofficial, unaffiliated with Healthchecks.io.** This is a third-party
 > MCP server, not an official Healthchecks.io product.
@@ -26,7 +26,7 @@ Example MCP client config (stdio):
   "mcpServers": {
     "healthchecks-io": {
       "command": "npx",
-      "args": ["healthchecks-io-mcp"],
+      "args": ["@digitalronin/healthchecks-io-mcp"],
       "env": {
         "HEALTHCHECKS_API_KEY": "your-key-here"
       }

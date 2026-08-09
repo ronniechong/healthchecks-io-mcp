@@ -4,7 +4,7 @@
 
 An MCP server exposing [Healthchecks.io](https://healthchecks.io)'s
 Management API as MCP tools, distributed as an installable local package
-(`npx healthchecks-io-mcp`) — a stdio-transport MCP server, not a hosted
+(`npx @digitalronin/healthchecks-io-mcp`) — a stdio-transport MCP server, not a hosted
 service. Unofficial, unaffiliated with Healthchecks.io.
 
 ## Stack
