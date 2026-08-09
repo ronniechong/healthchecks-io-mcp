@@ -9,8 +9,7 @@ API.
 
 ## Status
 
-v1 (read-only tools) implemented. This repo is currently private while it's
-being verified and tested — not yet published to npm.
+v1 (read-only tools) published to npm as `1.0.0`.
 
 ## Setup
 
