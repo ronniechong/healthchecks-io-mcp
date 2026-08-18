@@ -67,6 +67,37 @@ Once connected, just ask your AI assistant something like:
 
 If it responds with real data from your account, you're set up correctly.
 
+### Optional: multiple projects
+
+Healthchecks.io API keys are scoped per project, so a single server entry
+only ever talks to one project. To work with more than one, register the
+server multiple times under different names, each with its own key:
+
+```json
+{
+  "mcpServers": {
+    "healthchecks-io-personal": {
+      "command": "npx",
+      "args": ["@digitalronin/healthchecks-io-mcp"],
+      "env": {
+        "HEALTHCHECKS_API_KEY": "personal-project-key-here"
+      }
+    },
+    "healthchecks-io-work": {
+      "command": "npx",
+      "args": ["@digitalronin/healthchecks-io-mcp"],
+      "env": {
+        "HEALTHCHECKS_API_KEY": "work-project-key-here"
+      }
+    }
+  }
+}
+```
+
+Each entry runs its own process holding a single key, and MCP clients
+namespace tools by server name, so you can tell which project a tool call
+is hitting.
+
 ### Optional: self-hosted Healthchecks.io
 
 Healthchecks.io is open source, and some people run their own instance
