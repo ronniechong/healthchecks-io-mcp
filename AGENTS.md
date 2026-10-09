@@ -106,6 +106,12 @@ npm audit             # dependency vulnerability check
   secrets needed) automatically on every GitHub Release, right after the
   npm publish step. No manual `mcp-publisher` steps needed for routine
   version bumps anymore.
+- The registry steps live in `registry.yml`, which `release.yml` calls
+  after npm publish. It waits for the new version to be visible on npm
+  first (the registry rejects versions npm hasn't surfaced yet). If the
+  registry publish fails after npm succeeded, run `registry.yml` manually
+  (Actions → MCP Registry → Run workflow) instead of re-running the
+  release, which would fail re-publishing to npm.
 
 ## Feature philosophy
 

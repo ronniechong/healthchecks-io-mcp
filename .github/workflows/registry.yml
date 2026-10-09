@@ -1,0 +1,47 @@
+name: MCP Registry
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Sync server.json version from package.json
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.tmp
+          mv server.tmp server.json
+
+      # The registry validates the npm version exists, and a fresh npm publish can take minutes to become visible.
+      - name: Wait for npm version
+        run: |
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          for i in $(seq 1 40); do
+            if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+              echo "$NAME@$VERSION is on npm"
+              exit 0
+            fi
+            echo "Waiting for $NAME@$VERSION on npm ($i/40)"
+            sleep 15
+          done
+          echo "$NAME@$VERSION did not appear on npm within 10 minutes"
+          exit 1
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      - name: Authenticate to MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish server to MCP Registry
+        run: ./mcp-publisher publish
