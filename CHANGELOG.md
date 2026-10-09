@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 this project follows [Semantic Versioning](https://semver.org/).
 
+## [2.1.2] - 2026-10-10
+
+### Changed
+
+- Bump `@modelcontextprotocol/server` 2.0.0 → 2.3.0. No behaviour change for this server (stdio, single connection).
+- Dev dependencies: `@modelcontextprotocol/client` 2.3.0 (fixes GHSA-6qxp-vccf-f47h, test-only), prettier 3.9.9, `@types/node` 26.6.4.
+
 ## [2.1.1] - 2026-08-18
 
 ### Added
